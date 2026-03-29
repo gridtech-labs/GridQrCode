@@ -1,0 +1,136 @@
+# 🍽️ QR SaaS — Sprint 1: Foundation & Auth
+
+> Turborepo monorepo · Next.js 16 · Express · PostgreSQL · JWT
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Node.js ≥ 20
+- pnpm ≥ 9 (`npm install -g pnpm`)
+- Docker + Docker Compose
+
+### 1 — Clone & Install
+
+```bash
+git clone <repo>
+cd qr-saas
+
+# Install all workspace deps
+pnpm install
+```
+
+### 2 — Environment
+
+```bash
+cp .env.example .env
+# Edit .env — set JWT_SECRET, SUPER_ADMIN_PASSWORD, etc.
+```
+
+### 3 — Start Infrastructure
+
+```bash
+# Starts Postgres, Redis, and Nginx
+docker compose up postgres redis -d
+
+# Wait for health checks, then run migrations
+pnpm db:migrate
+```
+
+### 4 — Start Dev Servers
+
+```bash
+# Starts both API (:3001) and Web (:3000) in parallel
+pnpm dev
+```
+
+Open [http://localhost:3000/register](http://localhost:3000/register)
+
+---
+
+## Project Structure
+
+```
+qr-saas/
+├── apps/
+│   ├── api/          # Express.js REST API + Socket.io
+│   └── web/          # Next.js 16 frontend
+└── packages/
+    └── shared/       # Shared TypeScript types
+```
+
+---
+
+## API Reference (Sprint 1)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Register restaurant + owner |
+| `POST` | `/api/v1/auth/login` | Login → tokens |
+| `POST` | `/api/v1/auth/refresh` | Rotate refresh token |
+| `POST` | `/api/v1/auth/logout` | Revoke session |
+| `GET` | `/api/v1/auth/me` | Get current user |
+| `GET` | `/api/v1/health` | Health check |
+
+### Example: Register
+
+```bash
+curl -X POST http://localhost:3001/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "owner@myrestaurant.com",
+    "password": "SecurePass1!",
+    "firstName": "Maria",
+    "lastName": "Chen",
+    "restaurantName": "Chen'\''s Kitchen"
+  }'
+```
+
+### Example: Login
+
+```bash
+curl -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "owner@myrestaurant.com", "password": "SecurePass1!" }'
+```
+
+---
+
+## Running Tests
+
+```bash
+# Set up test DB first
+createdb qrsaas_test
+DATABASE_URL=postgresql://qrsaas:secret@localhost:5432/qrsaas_test pnpm db:migrate
+
+# Run auth integration tests
+pnpm --filter api test
+```
+
+---
+
+## Key Architecture Decisions
+
+### JWT Strategy
+- **Access token**: 15-minute lifetime, signed with `JWT_SECRET`, attached as `Bearer` header
+- **Refresh token**: 30-day lifetime, stored as opaque hash in `refresh_tokens` table, sent as `httpOnly` cookie
+- **Rotation**: Each `/auth/refresh` call revokes the old token and issues a new pair
+
+### Multi-Tenancy
+- Every user JWT contains `restaurantId`
+- `requireTenant` middleware validates the restaurant is active + subscription valid
+- All DB queries filter by `restaurant_id` — no cross-tenant data leakage possible
+- Super admins can impersonate any restaurant via `X-Restaurant-Id` header
+
+### Trial System
+- New restaurants get a 14-day Pro trial automatically on register
+- `tenant.middleware.ts` checks `trial_ends_at` on every authenticated request
+- Returns `402 TRIAL_EXPIRED` when expired, directing user to `/settings/billing`
+
+---
+
+## Sprint 2 →
+
+Next sprint adds Restaurant + Menu CRUD, image uploads to S3, and the full
+staff dashboard shell. Run `git checkout sprint-2` when ready.
