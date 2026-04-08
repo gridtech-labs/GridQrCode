@@ -303,7 +303,7 @@ function ItemCard({ item, onEdit, onDelete, onToggle, onImage }: {
             <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
             {item.categoryName && <p className="text-xs text-slate-400">{item.categoryName}</p>}
           </div>
-          <p className="font-bold text-slate-900 text-sm shrink-0">${Number(item.price).toFixed(2)}</p>
+          <p className="font-bold text-slate-900 text-sm shrink-0">{Number(item.price).toFixed(2)}</p>
         </div>
         {item.description && <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{item.description}</p>}
         {item.tags.length > 0 && (

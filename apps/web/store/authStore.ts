@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import api, { setAccessToken } from "../lib/api";
+import api, { setAccessToken, getAccessToken } from "../lib/api";
 import type { AuthUser, LoginDto, RegisterDto } from "@qr-saas/shared";
 
 interface AuthState {
@@ -46,7 +46,6 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await api.post<{
             data: { user: AuthUser; accessToken: string; expiresIn: number };
           }>("/auth/login", credentials);
-
           setAccessToken(data.data.accessToken);
           setAuthCookie();
           set({ user: data.data.user, isAuthenticated: true, isLoading: false });
@@ -65,7 +64,6 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await api.post<{
             data: { user: AuthUser; accessToken: string; expiresIn: number };
           }>("/auth/register", payload);
-
           setAccessToken(data.data.accessToken);
           setAuthCookie();
           set({ user: data.data.user, isAuthenticated: true, isLoading: false });
@@ -79,11 +77,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        try {
-          await api.post("/auth/logout");
-        } catch {
-          // ignore — clear client state regardless
-        }
+        try { await api.post("/auth/logout"); } catch { /* ignore */ }
         setAccessToken(null);
         clearAuthCookie();
         set({ user: null, isAuthenticated: false, error: null });
@@ -95,9 +89,14 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await api.get<{ data: { user: AuthUser } }>("/auth/me");
           set({ user: data.data.user });
         } catch {
-          clearAuthCookie();
-          setAccessToken(null);
-          set({ user: null, isAuthenticated: false });
+          // Only clear auth if there is truly no token anywhere —
+          // a 401 here is usually a stale access token; the axios interceptor
+          // will refresh it automatically on the next real request.
+          if (!getAccessToken()) {
+            clearAuthCookie();
+            setAccessToken(null);
+            set({ user: null, isAuthenticated: false });
+          }
         }
       },
 
@@ -109,12 +108,19 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-     onRehydrateStorage: () => (state) => {
-  // Restore token into memory so axios interceptor can use it immediately
-  const storedToken = localStorage.getItem("at");
-  if (storedToken) setAccessToken(storedToken);
-  state?.setHasHydrated(true);
-},
+      onRehydrateStorage: () => (state) => {
+        // CRITICAL: Restore the in-memory access token from localStorage immediately
+        // when the Zustand store rehydrates. Without this, the axios interceptor
+        // cannot attach the token on the first batch of requests that fire right
+        // after a page refresh — causing 401 on /restaurant, /auth/me, /tables etc.
+        if (typeof window !== "undefined") {
+          const storedToken = localStorage.getItem("at");
+          if (storedToken) {
+            setAccessToken(storedToken);
+          }
+        }
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

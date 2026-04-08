@@ -55,7 +55,7 @@ function CartDrawer({ open, onClose, restaurantId, sessionToken, currency, onOrd
   const [error, setError] = useState("");
 
   const symbols: Record<string, string> = { USD:"$", EUR:"€", GBP:"£", INR:"₹", AED:"د.إ", CAD:"CA$", AUD:"A$", SGD:"S$", JPY:"¥" };
-  const sym = symbols[currency] ?? currency + " ";
+  const sym = symbols[currency?.toUpperCase()] ?? currency + " ";
 
   const placeOrder = async () => {
     if (!items.length) return;
@@ -190,13 +190,16 @@ function OrderTracker({ restaurantId, sessionToken }: { restaurantId: string; se
 }
 
 // ── Item card ─────────────────────────────────────────────────
-function ItemCard({ item, currency, onAdd }: { item: MenuItem; currency: string; onAdd: (item: MenuItem) => void }) {
+function ItemCard({ item, currency, showCalories, showAllergens, onAdd }: {
+  item: MenuItem; currency: string; showCalories: boolean; showAllergens: boolean;
+  onAdd: (item: MenuItem) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const cartItems = useCartStore(s => s.items);
   const inCart = cartItems.find(i => i.menuItemId === item.id);
 
   const symbols: Record<string, string> = { USD:"$", EUR:"€", GBP:"£", INR:"₹", AED:"د.إ", CAD:"CA$", AUD:"A$", SGD:"S$", JPY:"¥" };
-  const sym = symbols[currency] ?? currency + " ";
+  const sym = symbols[currency?.toUpperCase()] ?? currency + " ";
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
@@ -216,12 +219,12 @@ function ItemCard({ item, currency, onAdd }: { item: MenuItem; currency: string;
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
             {item.prepTimeMin > 0 && <span className="text-xs text-slate-400">⏱ {item.prepTimeMin} min</span>}
-            {item.calories && <span className="text-xs text-slate-400">🔥 {item.calories} cal</span>}
+            {showCalories && item.calories && <span className="text-xs text-slate-400">🔥 {item.calories} cal</span>}
             {item.tags.slice(0, 3).map(tag => (
               <span key={tag} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100">{tag}</span>
             ))}
           </div>
-          {item.allergens.length > 0 && expanded && (
+          {showAllergens && item.allergens.length > 0 && expanded && (
             <div className="mt-2 flex flex-wrap gap-1">
               {item.allergens.map(a => (
                 <span key={a} className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">{a}</span>
@@ -360,6 +363,7 @@ export default function DinerPage() {
             <div className="space-y-3">
               {featuredItems.map(item => (
                 <ItemCard key={item.id} item={item} currency={restaurant.currency}
+                  showCalories={!!restaurant.settings?.showCalories} showAllergens={!!restaurant.settings?.showAllergens}
                   onAdd={(mi) => { useCartStore.getState().addItem(mi); }} />
               ))}
             </div>
@@ -391,6 +395,7 @@ export default function DinerPage() {
                 ? <p className="text-sm text-slate-400 text-center py-8">No items in this category.</p>
                 : displayItems.map(item => (
                     <ItemCard key={item.id} item={item} currency={restaurant.currency}
+                      showCalories={!!restaurant.settings?.showCalories} showAllergens={!!restaurant.settings?.showAllergens}
                       onAdd={(mi) => useCartStore.getState().addItem(mi)} />
                   ))}
             </div>
@@ -408,6 +413,7 @@ export default function DinerPage() {
                   <div className="space-y-3">
                     {catItems.map(item => (
                       <ItemCard key={item.id} item={item} currency={restaurant.currency}
+                        showCalories={!!restaurant.settings?.showCalories} showAllergens={!!restaurant.settings?.showAllergens}
                         onAdd={(mi) => useCartStore.getState().addItem(mi)} />
                     ))}
                   </div>
@@ -423,6 +429,7 @@ export default function DinerPage() {
                   <div className="space-y-3">
                     {uncatItems.map(item => (
                       <ItemCard key={item.id} item={item} currency={restaurant.currency}
+                        showCalories={!!restaurant.settings?.showCalories} showAllergens={!!restaurant.settings?.showAllergens}
                         onAdd={(mi) => useCartStore.getState().addItem(mi)} />
                     ))}
                   </div>

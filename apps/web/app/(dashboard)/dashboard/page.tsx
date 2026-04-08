@@ -8,6 +8,7 @@ import { useTableStore } from "../../../store/tableStore";
 import { useOrderStore } from "../../../store/orderStore";
 import { useBillingStore } from "../../../store/billingStore";
 import Link from "next/link";
+import { currencySymbol } from "../../../lib/currency";
 
 const SPRINTS = [
   { num: 1, name: "Auth & Foundation",      done: true  },
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   const { stats, fetchStats } = useOrderStore();
   const { usage, fetchUsage } = useBillingStore();
   const [apiOk, setApiOk] = useState<boolean | null>(null);
+  const sym = currencySymbol(restaurant?.currency);
 
   useEffect(() => {
     fetchRestaurant();
@@ -110,7 +112,7 @@ export default function DashboardPage() {
         <StatCard icon="🪑" label="Tables"      value={tables.length} href="/tables" sub={`${availableTables} available · ${occupiedTables} occupied`} />
         <StatCard icon="📍" label="Areas"       value={areas.length}  href="/tables" />
         <StatCard icon="📦" label="Orders today"  value={stats?.totalOrders ?? "—"}  href="/orders" sub={stats ? `$${stats.totalRevenue.toFixed(2)} revenue` : "Loading…"} />
-        <StatCard icon="💰" label="Revenue / mo"  value={usage ? `$${usage.revenueThisMonth.toFixed(0)}` : "—"} href="/analytics" sub={usage ? `${usage.ordersThisMonth} orders` : ""} />
+        <StatCard icon="💰" label="Revenue / mo"  value={usage ? `${sym}${usage.revenueThisMonth.toFixed(0)}` : "—"} href="/analytics" sub={usage ? `${usage.ordersThisMonth} orders` : ""} />
       </div>
 
       {/* Quick actions */}

@@ -12,7 +12,11 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "*.amazonaws.com" },
       { protocol: "https", hostname: "*.cloudfront.net" },
-      { protocol: "http",  hostname: "localhost" },
+      // Local dev — API serves images at localhost:3001/uploads/
+      { protocol: "http", hostname: "localhost", port: "3001" },
+      { protocol: "http", hostname: "localhost", port: "" },
+      // Allow LAN IP for phone testing (e.g. 192.168.x.x:3001)
+      { protocol: "http", hostname: "**" },
     ],
   },
 

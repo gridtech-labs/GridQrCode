@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRestaurantStore } from "../../../../store/restaurantStore";
+import { currencySymbol } from "../../../../lib/currency";
 import { useBillingStore } from "../../../../store/billingStore";
 import type { Plan } from "@qr-saas/shared";
 
@@ -42,12 +44,14 @@ function PlanCard({
   billingCycle,
   onSelect,
   loading,
+  sym,
 }: {
   plan: Plan;
   isCurrent: boolean;
   billingCycle: "monthly" | "yearly";
   onSelect: (planId: string) => void;
   loading: boolean;
+  sym: string;
 }) {
   const price = billingCycle === "yearly" ? plan.priceYearly / 12 : plan.priceMonthly;
   const savings = Math.round(((plan.priceMonthly * 12 - plan.priceYearly) / (plan.priceMonthly * 12)) * 100);
@@ -91,7 +95,7 @@ function PlanCard({
           )}
         </div>
         <div className="flex items-end gap-1">
-          <span className="text-4xl font-black text-slate-900">${price.toFixed(0)}</span>
+          <span className="text-4xl font-black text-slate-900">{sym}{price.toFixed(0)}</span>
           <span className="text-slate-500 text-sm mb-1">/mo</span>
         </div>
         {billingCycle === "yearly" && savings > 0 && (
@@ -138,6 +142,8 @@ function PlanCard({
 // ── Page ──────────────────────────────────────────────────────
 export default function BillingPage() {
   const { plans, subscription, usage, history, isLoading, fetchAll, changePlan } = useBillingStore();
+  const restaurant = useRestaurantStore(s => s.restaurant);
+  const sym = currencySymbol(restaurant?.currency);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [changingPlan, setChangingPlan] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -230,7 +236,7 @@ export default function BillingPage() {
             </div>
             <div className="bg-indigo-50 rounded-xl p-4">
               <p className="text-xs text-slate-500 mb-1">Revenue this month</p>
-              <p className="text-2xl font-bold text-indigo-700">${usage.revenueThisMonth.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-indigo-700">{sym}{usage.revenueThisMonth.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -265,6 +271,7 @@ export default function BillingPage() {
               billingCycle={billingCycle}
               onSelect={handleSelectPlan}
               loading={changingPlan}
+              sym={sym}
             />
           ))}
         </div>
@@ -291,7 +298,7 @@ export default function BillingPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-slate-900">
-                    {record.amount === 0 ? "—" : `$${record.amount.toFixed(2)}`}
+                    {record.amount === 0 ? "—" : `${sym}${record.amount.toFixed(2)}`}
                   </p>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     record.status === "paid"    ? "bg-green-100 text-green-700" :

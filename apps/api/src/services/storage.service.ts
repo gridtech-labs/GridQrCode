@@ -114,9 +114,11 @@ export class StorageService {
     ensureLocalDir();
     const localPath = path.join(LOCAL_UPLOADS_DIR, filename);
     fs.writeFileSync(localPath, processed);
-    const appUrl = process.env.APP_URL ?? "http://localhost:3001";
+    // Use API_URL (not APP_URL) — images are served by the API server (port 3001),
+    // not the frontend. APP_URL may point to the Next.js server (port 3000).
+    const apiUrl = process.env.API_URL ?? `http://localhost:${process.env.PORT ?? "3001"}`;
     return {
-      url: `${appUrl}/uploads/${filename}`,
+      url: `${apiUrl}/uploads/${filename}`,
       key,
       size: processed.length,
       mimeType,

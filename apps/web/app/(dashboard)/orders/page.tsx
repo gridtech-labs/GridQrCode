@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRestaurantStore } from "../../../store/restaurantStore";
+import { currencySymbol } from "../../../lib/currency";
 import { useOrderStore } from "../../../store/orderStore";
 import type { Order, OrderStatus } from "@qr-saas/shared";
 
@@ -23,7 +25,7 @@ const FILTER_TABS: { key: string; label: string }[] = [
 ];
 
 // ── Order Card ────────────────────────────────────────────────
-function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (id: string, status: OrderStatus) => Promise<void> }) {
+function OrderCard({ order, onStatusUpdate, sym }: { order: Order; onStatusUpdate: (id: string, status: OrderStatus) => Promise<void>; sym: string }) {
   const cfg = STATUS_CONFIG[order.status];
   const [advancing, setAdvancing] = useState(false);
 
@@ -76,7 +78,7 @@ function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (i
                 <p className="text-sm font-medium text-slate-800 truncate">{item.itemName}</p>
                 {item.notes && <p className="text-xs text-slate-400 truncate">{item.notes}</p>}
               </div>
-              <p className="text-sm font-medium text-slate-700 shrink-0">${item.totalPrice.toFixed(2)}</p>
+              <p className="text-sm font-medium text-slate-700 shrink-0">{sym}{item.totalPrice.toFixed(2)}</p>
             </div>
           ))}
           {order.notes && (
@@ -87,7 +89,7 @@ function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (i
         {/* Total */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100 mb-3">
           <span className="text-sm text-slate-500">Total</span>
-          <span className="font-bold text-slate-900">${order.totalAmount.toFixed(2)}</span>
+          <span className="font-bold text-slate-900">{sym}{order.totalAmount.toFixed(2)}</span>
         </div>
 
         {/* Actions */}
@@ -111,7 +113,7 @@ function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (i
 }
 
 // ── Stats bar ─────────────────────────────────────────────────
-function StatsBar() {
+function StatsBar({ sym }: { sym: string }) {
   const stats = useOrderStore(s => s.stats);
   if (!stats) return null;
 
@@ -120,8 +122,8 @@ function StatsBar() {
       {[
         { label: "Orders today",   value: stats.totalOrders,                      sub: "" },
         { label: "Pending",        value: stats.pendingOrders,                    sub: "awaiting action" },
-        { label: "Revenue today",  value: `$${stats.totalRevenue.toFixed(2)}`,     sub: "excl. cancelled" },
-        { label: "Avg order",      value: `$${stats.avgOrderValue.toFixed(2)}`,    sub: "" },
+        { label: "Revenue today",  value: `${sym}${stats.totalRevenue.toFixed(2)}`,  sub: "excl. cancelled" },
+        { label: "Avg order",      value: `${sym}${stats.avgOrderValue.toFixed(2)}`, sub: "" },
       ].map(s => (
         <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-4">
           <p className="text-xs text-slate-500 mb-1">{s.label}</p>
@@ -136,6 +138,8 @@ function StatsBar() {
 // ── Page ──────────────────────────────────────────────────────
 export default function OrdersPage() {
   const { orders, total, isLoading, fetchOrders, fetchStats, updateStatus, upsertOrder } = useOrderStore();
+  const restaurant = useRestaurantStore(s => s.restaurant);
+  const sym = currencySymbol(restaurant?.currency);
   const [activeFilter, setActiveFilter] = useState("all");
 
   const load = useCallback(() => {
@@ -172,7 +176,7 @@ export default function OrdersPage() {
         </button>
       </div>
 
-      <StatsBar />
+      <StatsBar sym={sym} />
 
       {/* Filter tabs */}
       <div className="flex items-center gap-1.5 mb-5 overflow-x-auto pb-1">
@@ -213,7 +217,7 @@ export default function OrdersPage() {
               <h2 className="font-semibold text-slate-700 text-sm uppercase tracking-wider mb-3">Active ({activeOrders.length})</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {activeOrders.map(order => (
-                  <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} />
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} sym={sym} />
                 ))}
               </div>
             </div>
@@ -225,7 +229,7 @@ export default function OrdersPage() {
               <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wider mb-3">Completed ({finishedOrders.length})</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-60">
                 {finishedOrders.map(order => (
-                  <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} />
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} sym={sym} />
                 ))}
               </div>
             </div>
